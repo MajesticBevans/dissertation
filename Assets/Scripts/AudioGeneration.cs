@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class AudioGeneration : MonoBehaviour
 {
@@ -29,9 +30,27 @@ public class AudioGeneration : MonoBehaviour
     private bool amped;
     private bool redrawn;
     private int reCalculationCounter;
-    private const int reCalcMax = 60;
+    private const int reCalcMax = 120;
     private UI ui;
- 
+    private bool clipping;
+    public GameObject clippingErrorText; 
+
+    /**
+    public enum WavePreset
+    {
+        STANDARD,
+        SAW_WAVE,
+        REVERSE_SAW_WAVE,
+        TRIANGLE_WAVE,
+        SQUARE_WAVE,
+        RECTIFIED,
+        PULSE
+    }
+    
+
+    WavePreset currPreset;
+    **/
+
     void Start()
     {
         //setup audio
@@ -55,14 +74,17 @@ public class AudioGeneration : MonoBehaviour
         amplitude = prevAmplitude = 10;
         playing = false;
         redrawn = false;
+        clipping = false;
         reCalculationCounter = 0;
         harmonics.Add(1, (1, 0)); // add fundamental harmonic, with amplitude 1 and phase 0
         prevHarmonics = new Dictionary<int, (float, float)>(harmonics);
         currWave = WaveOperations.CreateSine(frequency, amplitude, currWave); // create initial wave
+        //currPreset = WavePreset.STANDARD;
 
         //setup UI
         ui = GameObject.Find("Canvas").GetComponent<UI>();
         ui.RedrawSliders(harmonics);
+        clippingErrorText.SetActive(false);
     }
 
     void Update()
@@ -80,7 +102,16 @@ public class AudioGeneration : MonoBehaviour
             audioBufferSize = Mathf.RoundToInt(
                 Mathf.Floor(frequency * bufferRatio) * ((float)SAMPLE_RATE / frequency));
         }
-
+        
+        if (clipping && !clippingErrorText.activeSelf)
+        {
+            clippingErrorText.SetActive(true);
+        }
+        else if (!clipping && clippingErrorText.activeSelf)
+        {
+            clippingErrorText.SetActive(false);
+        }
+        
         // Play/Pause audio
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -106,13 +137,37 @@ public class AudioGeneration : MonoBehaviour
         // Add harmonic on up press
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            if (harmonics.Keys.Count > 0) 
+            /**
+            int harmKey;
+            if (harmonics.Count < 1) { harmKey = 1; }
+            else { harmKey = harmonics.Keys.Max() + 1; }
+
+            float tempAmplitude;
+            float tempPhase;
+            switch (currPreset)
             {
-                int harmKey = harmonics.Keys.Max(); 
-                harmonics.Add(harmKey + 1, 
-                (1f / Mathf.Pow(((float)harmKey + 1f), 2), 0));
-            }
-            else {harmonics.Add(1, (1f, 0f));}
+                case WavePreset.REVERSE_SAW_WAVE:
+                    
+                    tempAmplitude = (2f/Mathf.PI)/harmKey;
+                    tempPhase = 1f/(harmKey * 2f);
+
+                    harmonics.Add(harmKey, (tempAmplitude, tempPhase));
+                    break;
+
+
+
+                default:
+                **/
+                int harmKey = harmonics.Keys.Max() + 1;
+                if (harmonics.Keys.Count > 0) 
+                { 
+                    harmonics.Add(harmKey, 
+                    (1f / Mathf.Pow((float)harmKey, 2), 0));
+                }
+                else {harmonics.Add(1, (1f, 0f));}
+
+                    //break;
+            
         }
 
         // Remove harmonic on down press
@@ -221,6 +276,7 @@ public class AudioGeneration : MonoBehaviour
     // Takes a small buffer of samples from currWave and passes them to the audio filter
     void OnAudioFilterRead(float[] data, int channels)
     {
+        clipping = false;
         // WRITE NEXT CHUNK TO AUDIO BUFFER (512 samples)
         for (int i = 0; i < data.Length; i+= channels)
         {  
@@ -233,8 +289,12 @@ public class AudioGeneration : MonoBehaviour
             {
                 timeIndex = 0;
             }
+            
+            if (data[i] > 1)
+            {
+                clipping = true;
+            }
         }
-
         // If user changes frequency, execute BlendSine
         if (frequency != prevFrequency)
         {

@@ -25,7 +25,6 @@ public class Spinner : MonoBehaviour
         image.color = defaultColour;
         audioGen = GameObject.Find("Audio").GetComponent<AudioGeneration>();
         harmNum = int.Parse(gameObject.name.Remove(0,7));
-        print(harmNum);
         currentValue = 0;
     }
 

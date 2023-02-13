@@ -6,14 +6,15 @@ public class WaveGraph : MonoBehaviour
 {
     public float yVal;
     public float zVal = 10;
-    public float height;
-    [Range(1,100)]
+    public const float height = 35;
+    [Range(1,50)]
     public float zoom;
     private float prevZoom;
-    private float ZOOM_CONST = 50; //simply a value to adjust the zoom sensitivity
+    private float ZOOM_CONST = 45; //simply a value to adjust the zoom sensitivity
     public GameObject graphPoint; //prefab for the points on the graph
     private List<GameObject> points = new List<GameObject>();
     private int bufferSize;
+    private const float graph_bounds = 65f;
     List<float> currValues = new List<float>();
 
     public void setup(int size) 
@@ -46,8 +47,8 @@ public class WaveGraph : MonoBehaviour
         // PRESENT
         for (int i = 0; i < values.Count; i++)
         {
-            float x = (i - values.Count/2) * (zoom/ZOOM_CONST);
-            if ((x < -80f || x > 80f))
+            float x = transform.position.x + (i - values.Count/2) * (zoom/ZOOM_CONST);
+            if ((x < transform.position.x - graph_bounds || x > transform.position.x + graph_bounds))
             {
                 points[i].SetActive(false);
             }
