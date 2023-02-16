@@ -15,6 +15,7 @@ public class FrequencySlider : MonoBehaviour
         slider = GetComponent<Slider>();
         label = GameObject.Find("FrequencyLabel").GetComponent<Text>();
         slider.onValueChanged.AddListener(delegate {updateValue();});
+        slider.value = audioGen.frequency;
     }
 
     void updateValue()
@@ -22,6 +23,4 @@ public class FrequencySlider : MonoBehaviour
         audioGen.frequency = slider.value;
         label.text = "Frequency [" + slider.value.ToString() + "]";
     }
-
-
 }

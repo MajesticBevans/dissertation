@@ -6,8 +6,8 @@ using UnityEngine.UI;
 
 public class AudioGeneration : MonoBehaviour
 {
-    [Range(4,2000)]
-    public float frequency = 300;
+    [Range(8,500)]
+    public float frequency;
     [Range(1,10)]
     public float amplitude;
     private float prevFrequency;
@@ -33,23 +33,22 @@ public class AudioGeneration : MonoBehaviour
     private const int reCalcMax = 120;
     private UI ui;
     private bool clipping;
-    public GameObject clippingErrorText; 
-
-    /**
+    private bool preset_changed;
+    public GameObject clippingErrorText;     
     public enum WavePreset
     {
         STANDARD,
+        N_SQUARED_FALLOFF,
+        N_FALLOFF,
         SAW_WAVE,
         REVERSE_SAW_WAVE,
         TRIANGLE_WAVE,
         SQUARE_WAVE,
-        RECTIFIED,
-        PULSE
     }
     
 
-    WavePreset currPreset;
-    **/
+    public WavePreset currPreset;
+    
 
     void Start()
     {
@@ -70,6 +69,7 @@ public class AudioGeneration : MonoBehaviour
 
         //setup initial values
         currPhase = 0;
+        frequency = 200;
         prevFrequency = frequency;
         amplitude = prevAmplitude = 10;
         playing = false;
@@ -79,7 +79,7 @@ public class AudioGeneration : MonoBehaviour
         harmonics.Add(1, (1, 0)); // add fundamental harmonic, with amplitude 1 and phase 0
         prevHarmonics = new Dictionary<int, (float, float)>(harmonics);
         currWave = WaveOperations.CreateSine(frequency, amplitude, currWave); // create initial wave
-        //currPreset = WavePreset.STANDARD;
+        currPreset = WavePreset.N_FALLOFF;
 
         //setup UI
         ui = GameObject.Find("Canvas").GetComponent<UI>();
@@ -137,37 +137,71 @@ public class AudioGeneration : MonoBehaviour
         // Add harmonic on up press
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            /**
+            
             int harmKey;
             if (harmonics.Count < 1) { harmKey = 1; }
             else { harmKey = harmonics.Keys.Max() + 1; }
-
             float tempAmplitude;
             float tempPhase;
+
             switch (currPreset)
             {
-                case WavePreset.REVERSE_SAW_WAVE:
-                    
-                    tempAmplitude = (2f/Mathf.PI)/harmKey;
-                    tempPhase = 1f/(harmKey * 2f);
+                case WavePreset.SAW_WAVE:
+                    tempAmplitude = Mathf.Pow(-1f, (float)harmKey) / (float)harmKey;
 
-                    harmonics.Add(harmKey, (tempAmplitude, tempPhase));
+                    if (tempAmplitude < 0)
+                    {
+                        tempAmplitude *= -1f;
+                        tempPhase = 0;
+                    }
+                    else { tempPhase = 1f / (2f * (float)harmKey); }
                     break;
 
+                case WavePreset.REVERSE_SAW_WAVE:
+                    tempAmplitude = Mathf.Pow(-1f, (float)harmKey) / (float)harmKey;
 
+                    if (tempAmplitude < 0)
+                    {
+                        tempAmplitude *= -1f;
+                        tempPhase = 1f / (2f * (float)harmKey);
+                    }
+                    else { tempPhase = 0; }
+                    break;
 
+                case WavePreset.TRIANGLE_WAVE:
+                    if (harmKey % 2 == 0)
+                    {
+                        tempAmplitude = 0;
+                        tempPhase = 0;
+                    }
+                    else
+                    {
+                        tempAmplitude = 1f/ Mathf.Pow((float)harmKey, 2f);
+                        tempPhase = (harmKey - 1) % 4 == 0 ? 0 : 1f / (2f * (float)harmKey);
+                    }
+                    break;
+
+                case WavePreset.SQUARE_WAVE:
+                    tempAmplitude = harmKey % 2 == 0 ? 0 : 1f/(float)harmKey;
+                    tempPhase = 0;
+                    break;
+
+                case WavePreset.N_FALLOFF:
+                    tempAmplitude = 1f / (float)harmKey;
+                    tempPhase = 0;
+                    break;
+
+                case WavePreset.N_SQUARED_FALLOFF:
+                    tempAmplitude = 1f / Mathf.Pow((float)harmKey, 2);
+                    tempPhase = 0;
+                    break;
+                
                 default:
-                **/
-                int harmKey = harmonics.Keys.Max() + 1;
-                if (harmonics.Keys.Count > 0) 
-                { 
-                    harmonics.Add(harmKey, 
-                    (1f / Mathf.Pow((float)harmKey, 2), 0));
-                }
-                else {harmonics.Add(1, (1f, 0f));}
-
-                    //break;
-            
+                    tempAmplitude = 1f; 
+                    tempPhase = 0f;
+                    break;
+            }
+            harmonics.Add(harmKey, (tempAmplitude, tempPhase));
         }
 
         // Remove harmonic on down press
@@ -201,8 +235,9 @@ public class AudioGeneration : MonoBehaviour
 
             foreach (int newHarm in newHarms)
             {
+                float harmPhase = (currPhase + harmonics[newHarm].phase) % 1f;
                 currWave = 
-                WaveOperations.addHarm(frequency, amplitude, newHarm, harmonics[newHarm].amplitude, currPhase, currWave);
+                WaveOperations.addHarm(frequency, amplitude, newHarm, harmonics[newHarm].amplitude, harmPhase, currWave);
             }
         }
 
@@ -281,7 +316,7 @@ public class AudioGeneration : MonoBehaviour
         for (int i = 0; i < data.Length; i+= channels)
         {  
             // feed data to both audio channels (L and R)
-            data[i+1] = data[i] = currWave[timeIndex];
+            data[i+1] = data[i] = currWave[timeIndex] / 2;
             timeIndex++;
         
             // reset index once it reaches audio buffer size

@@ -18,6 +18,8 @@ public class Spinner : MonoBehaviour
     public int harmNum;
     private const float mouseScalar = 1.2f;
     public float currentValue;
+    private const float DOUBLE_CLICK_DELAY = 0.5f;
+    private float initial_click_time;
     void Start()
     {
         phasing = false;
@@ -25,7 +27,8 @@ public class Spinner : MonoBehaviour
         image.color = defaultColour;
         audioGen = GameObject.Find("Audio").GetComponent<AudioGeneration>();
         harmNum = int.Parse(gameObject.name.Remove(0,7));
-        currentValue = 0;
+        currentValue = audioGen.harmonics[harmNum].phase * harmNum;
+        initial_click_time = 0;
     }
 
     void Update()
@@ -51,11 +54,28 @@ public class Spinner : MonoBehaviour
         {
             if (Input.GetMouseButtonDown(0))
             {
-                startValue = currentValue;
-                startMousexVal = Input.mousePosition.x;
-                startRotation = gameObject.transform.eulerAngles.z;
-                image.color = turningColour;
-                phasing = true;
+                float now = Time.time;
+                if (now > initial_click_time + DOUBLE_CLICK_DELAY)
+                {
+                    initial_click_time = now;
+                    startValue = currentValue;
+                    startMousexVal = Input.mousePosition.x;
+                    startRotation = gameObject.transform.eulerAngles.z;
+                    image.color = turningColour;
+                    phasing = true;
+                }
+                else if (gameObject.transform.eulerAngles.z == 0)
+                {
+                    gameObject.transform.eulerAngles = new Vector3(0,0,180);
+                    startValue = 0.5f * (1 / (float)harmNum);
+                    updatePhaseValue(0);
+                }
+                else
+                {
+                    gameObject.transform.eulerAngles = new Vector3(0,0,0);
+                    startValue = 0;
+                    updatePhaseValue(0);
+                }
             }
 
         }
@@ -85,6 +105,12 @@ public class Spinner : MonoBehaviour
     {
         currentValue = (startValue + value) % 1f;
         audioGen.harmonics[harmNum] = (audioGen.harmonics[harmNum].amplitude, currentValue);
+    }
+
+    public void setValue(float value)
+    {
+        currentValue = value;
+        transform.eulerAngles = new Vector3(0,0, value * 360);
     }
 }
  

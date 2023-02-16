@@ -77,6 +77,7 @@ public class UI : MonoBehaviour
                 amp_sliders.Add(newHarm, amp_slider);
                 amp_sliders[newHarm].value = harms[newHarm].amplitude;
                 phase_spinners.Add(newHarm, phase_spinner_object);
+                phase_spinners[newHarm].transform.eulerAngles = new Vector3(0,0, harms[newHarm].phase * newHarm * 360);
 
                 last_xVal += NEW_HARM_OFFSET;
             }
@@ -95,6 +96,13 @@ public class UI : MonoBehaviour
                 phase_spinners.Remove(oldHarm);
 
                 last_xVal -= NEW_HARM_OFFSET;
+            }
+        }
+        else
+        {
+            foreach (int key in amp_sliders.Keys)
+            {
+                amp_sliders[key].value = harms[key].amplitude;
             }
         }
     }

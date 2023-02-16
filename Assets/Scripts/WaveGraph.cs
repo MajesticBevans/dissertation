@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class WaveGraph : MonoBehaviour
 {
-    public float yVal;
+    public const float yVal = -30f;
     public float zVal = 10;
     public const float height = 35;
     [Range(1,50)]
