@@ -77,7 +77,6 @@ public class Spinner : MonoBehaviour
                     updatePhaseValue(0);
                 }
             }
-
         }
     }
 
@@ -109,8 +108,9 @@ public class Spinner : MonoBehaviour
 
     public void setValue(float value)
     {
-        currentValue = value;
-        transform.eulerAngles = new Vector3(0,0, value * 360);
+        startValue = value;
+        transform.eulerAngles = new Vector3(0,0, value * harmNum * 360);
+        updatePhaseValue(0);
     }
 }
  

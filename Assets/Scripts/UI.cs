@@ -119,7 +119,7 @@ public class UI : MonoBehaviour
             foreach (int harm in amp_sliders.Keys)
             {
                 amp_sliders[harm].value = harms[harm].amplitude;
-                phase_spinners[harm].gameObject.GetComponent<Spinner>().setValue(harms[harm].phase * harm);
+                phase_spinners[harm].gameObject.GetComponent<Spinner>().setValue(harms[harm].phase);
             }
         }
     }

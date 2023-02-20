@@ -78,7 +78,7 @@ public class AudioGeneration : MonoBehaviour
         harmonics.Add(1, (1, 0)); // add fundamental harmonic, with amplitude 1 and phase 0
         prevHarmonics = new Dictionary<int, (float, float)>(harmonics);
         currWave = WaveOperations.CreateSine(frequency, amplitude, currWave); // create initial wave
-        currPreset = WavePreset.N_FALLOFF;
+        currPreset = WavePreset.N_FALLOFF; // set default preset
 
         //setup UI
         ui = GameObject.Find("Canvas").GetComponent<UI>();
@@ -136,11 +136,19 @@ public class AudioGeneration : MonoBehaviour
         // Add harmonic on up press
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            
             int harmKey;
             if (harmonics.Count < 1) { harmKey = 1; }
             else { harmKey = harmonics.Keys.Max() + 1; }
             HandlePreset(harmKey);
+
+            if (harmKey == 2 && currPreset == WavePreset.REVERSE_SAW_WAVE)
+            {
+                harmonics[1] = (harmonics[1].amplitude, 0.5f);
+            }
+            else if (harmKey == 2)
+            {
+                harmonics[1] = (harmonics[1].amplitude, 0f);
+           }
         }
 
         // Remove harmonic on down press
@@ -184,7 +192,6 @@ public class AudioGeneration : MonoBehaviour
                 WaveOperations.removeHarm(frequency, amplitude, oldHarm, prevHarmonics[oldHarm].amplitude, harmPhase, currWave);
             }
         }
-
         // detect amplitude/phase changes per harmonic
         else
         {
@@ -228,7 +235,12 @@ public class AudioGeneration : MonoBehaviour
         // Safety net that ensures no artifacts remain present in the wave due to inaccuracies
         if (!redrawn && reCalculationCounter > reCalcMax && playing)
         {
-            currWave = WaveOperations.CreateSine(frequency, amplitude, harmonics, currPhase, currWave);
+            List<float> wave = WaveOperations.CreateSine(frequency, amplitude, harmonics, currPhase, currWave);
+            if (!currWave.Equals(wave))
+            {
+                currWave = wave;
+                graph.draw(currWave);
+            }
             reCalculationCounter = 0;
             print("Recalc");
         }
@@ -348,5 +360,14 @@ public class AudioGeneration : MonoBehaviour
     public void ChangePreset(WavePreset new_preset)
     {
         currPreset = new_preset;
+        if (currPreset == WavePreset.REVERSE_SAW_WAVE && harmonics.Count == 1)
+        {
+            harmonics[1] = (harmonics[1].amplitude, 0.5f);
+        }
+    }
+
+    public void ResetClicked(int harmKey)
+    {
+        HandlePreset(harmKey);
     }
 }
