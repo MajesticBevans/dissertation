@@ -188,7 +188,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7137065977586102309, guid: 298b414862e50de439260868e61760ac, type: 3}
       propertyPath: m_Value
-      value: 200
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 7137065977586102309, guid: 298b414862e50de439260868e61760ac, type: 3}
+      propertyPath: m_MaxValue
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 7137065977586102309, guid: 298b414862e50de439260868e61760ac, type: 3}
       propertyPath: m_Direction
@@ -1292,6 +1296,7 @@ MonoBehaviour:
   frequency: 200
   amplitude: 10
   clippingErrorText: {fileID: 859976037}
+  currPreset: 0
 --- !u!4 &1568719331
 Transform:
   m_ObjectHideFlags: 0
@@ -1351,7 +1356,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2ec178e8d6408943ab27c13867ae73c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  yVal: -25
   zVal: 10
   zoom: 1
   graphPoint: {fileID: 2794863766451828993, guid: d21b6287dcab3164fa9a2525e1401e3a, type: 3}
