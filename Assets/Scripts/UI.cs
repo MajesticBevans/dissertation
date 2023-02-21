@@ -8,18 +8,17 @@ public class UI : MonoBehaviour
     // Prefabs
     public GameObject amp_slider_prefab;
     public GameObject phase_spinner_prefab;
-    public GameObject frequency_slider_prefab;
     public GameObject text_prefab;
     public GameObject reset_button_prefab;
 
     // Position offsets and constants
     private float last_xVal;
-    private const float AMP_YVAL = 140f;
-    private const float PHASE_SPINNER_OFFSET = 80f;
-    private const float RESET_BUTTON_OFFSET = 100f;
-    private const float NEW_HARM_OFFSET = 40f;
-    private const float TEXT_OFFSET = 75f;
-    private const int TOTAL_SLIDERS = 24;
+    private const float AMP_YVAL = -350f;
+    private const float PHASE_SPINNER_OFFSET = 250f;
+    private const float RESET_BUTTON_OFFSET = 300f;
+    private const float NEW_HARM_OFFSET = 120f;
+    private const float TEXT_OFFSET = 230f;
+    private const int TOTAL_SLIDERS = 22;
 
     // Harmonic parameter dictionaries
     public Dictionary<int, Slider> amp_sliders = new Dictionary<int, Slider>();
@@ -34,7 +33,7 @@ public class UI : MonoBehaviour
     void Start()
     {
         // Initialise starting harmonic parameters position
-        last_xVal = -485;
+        last_xVal = -45f;
 
         // Import scripts
         audioGen = GameObject.Find("Audio").GetComponent<AudioGeneration>();
