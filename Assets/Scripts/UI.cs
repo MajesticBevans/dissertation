@@ -90,7 +90,7 @@ public class UI : MonoBehaviour
                 amp_sliders.Add(newHarm, amp_slider);
                 amp_sliders[newHarm].value = harms[newHarm].amplitude;
                 phase_spinners.Add(newHarm, phase_spinner_object);
-                phase_spinners[newHarm].transform.eulerAngles = new Vector3(0,0, harms[newHarm].phase * newHarm * 360);
+                phase_spinners[newHarm].GetComponent<Spinner>().setValue(harms[newHarm].phase);
                 reset_buttons.Add(newHarm, reset_button);
 
                 last_xVal += NEW_HARM_OFFSET;
@@ -118,8 +118,14 @@ public class UI : MonoBehaviour
         {
             foreach (int harm in amp_sliders.Keys)
             {
-                amp_sliders[harm].value = harms[harm].amplitude;
-                phase_spinners[harm].gameObject.GetComponent<Spinner>().setValue(harms[harm].phase * harm);
+                if (amp_sliders[harm].value != harms[harm].amplitude)
+                {
+                    amp_sliders[harm].value = harms[harm].amplitude;
+                }
+                if (phase_spinners[harm].gameObject.GetComponent<Spinner>().currentValue != harms[harm].phase)
+                {
+                    phase_spinners[harm].gameObject.GetComponent<Spinner>().setValue(harms[harm].phase);
+                }
             }
         }
     }

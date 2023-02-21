@@ -55,6 +55,7 @@ public class Spinner : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 float now = Time.time;
+                // if no double click
                 if (now > initial_click_time + DOUBLE_CLICK_DELAY)
                 {
                     initial_click_time = now;
@@ -63,22 +64,32 @@ public class Spinner : MonoBehaviour
                     startRotation = gameObject.transform.eulerAngles.z;
                     image.color = turningColour;
                     phasing = true;
-                }
+                }   // if double click and started from 0
                 else if (gameObject.transform.eulerAngles.z == 0)
                 {
-                    gameObject.transform.eulerAngles = new Vector3(0,0,180);
-                    startValue = 0.5f * (1 / (float)harmNum);
-                    updatePhaseValue(0);
-                }
+                    setValue(1f / (harmNum * 2f));
+                    audioGen.harmonics[harmNum] = (audioGen.harmonics[harmNum].amplitude, currentValue);
+                } // if double click and started not from 0
                 else
                 {
-                    gameObject.transform.eulerAngles = new Vector3(0,0,0);
-                    startValue = 0;
-                    updatePhaseValue(0);
+                    setValue(0f);
+                    audioGen.harmonics[harmNum] = (audioGen.harmonics[harmNum].amplitude, currentValue);
                 }
             }
 
         }
+    }
+
+    private void updatePhaseValue(float value)
+    {
+        currentValue = (startValue + value);
+        audioGen.harmonics[harmNum] = (audioGen.harmonics[harmNum].amplitude, currentValue);
+    }
+
+    public void setValue(float value)
+    {
+        currentValue = value;
+        transform.eulerAngles = new Vector3(0,0, value * harmNum * 360);
     }
 
     private bool IsPointerOverSpinner()
@@ -99,17 +110,5 @@ public class Spinner : MonoBehaviour
         }
 
         return raycastResults.Count > 0;
-    }
-
-    private void updatePhaseValue(float value)
-    {
-        currentValue = (startValue + value) % 1f;
-        audioGen.harmonics[harmNum] = (audioGen.harmonics[harmNum].amplitude, currentValue);
-    }
-
-    public void setValue(float value)
-    {
-        currentValue = value;
-        transform.eulerAngles = new Vector3(0,0, value * 360);
     }
 }

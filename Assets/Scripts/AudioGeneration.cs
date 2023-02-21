@@ -6,35 +6,6 @@ using UnityEngine.UI;
 
 public class AudioGeneration : MonoBehaviour
 {
-    [Range(8,500)]
-    public float frequency;
-    [Range(1,10)]
-    public float amplitude;
-    private float prevFrequency;
-    private float prevAmplitude;
-    public const int SAMPLE_RATE = 44100;
-    private int audioBufferSize;
-    private int graphBufferSize;
-    private List<float> currWave;
-    private List<float> refWave;
-    private float currPhase;
-    WaveGraph graph;
-    AudioSource audioSource;
-    int timeIndex = 0;
-    private bool blended;
-  // PRESENT
-    public Dictionary<int, (float amplitude, float phase)> harmonics = new Dictionary<int, (float, float)>();
-    public Dictionary<int, (float amplitude, float phase)> prevHarmonics = new Dictionary<int, (float, float)>();
-    private bool playing;
-    private bool harmed;
-    private bool amped;
-    private bool redrawn;
-    private int reCalculationCounter;
-    private const int reCalcMax = 120;
-    private UI ui;
-    private bool clipping;
-    private bool preset_changed;
-    public GameObject clippingErrorText;     
     public enum WavePreset
     {
         N_SQUARED_FALLOFF,
@@ -44,9 +15,45 @@ public class AudioGeneration : MonoBehaviour
         TRIANGLE_WAVE,
         SQUARE_WAVE,
     }
-    
 
+    // CONSTS
+    public const int SAMPLE_RATE = 44100;
+    private const int reCalcMax = 120;
+    private const float AMPLITUDE_MAX = 10f;
+    private const float FREQUENCY_MAX = 500f;
+    private const float FREQUENCY_MIN = 8f;
+
+    // IMPORTS
+    WaveGraph graph;
+    AudioSource audioSource;
+    private UI ui;
+    public GameObject clippingErrorText;  
+
+    // WAVE PARAMETERS
+    [Range(FREQUENCY_MIN,FREQUENCY_MAX)]
+    public float frequency;
+    [Range(0,AMPLITUDE_MAX)]
+    public float amplitude;
+    private float currPhase;
+    private float prevFrequency;
+    private float prevAmplitude;
+    private int audioBufferSize;
+    private int graphBufferSize;
+    public Dictionary<int, (float amplitude, float phase)> harmonics = new Dictionary<int, (float, float)>();
+    public Dictionary<int, (float amplitude, float phase)> prevHarmonics = new Dictionary<int, (float, float)>();
+    private List<float> currWave;
     private WavePreset currPreset;
+    int timeIndex = 0;
+
+    // CHANGE DETECTION BOOLS
+    private bool blended;
+    private bool playing;
+    private bool harmed;
+    private bool amped;
+    private bool redrawn;
+    private bool clipping;
+    private bool preset_changed;
+    private int reCalculationCounter;   
     
 
     void Start()
@@ -59,7 +66,7 @@ public class AudioGeneration : MonoBehaviour
 
         //setup graph
         graph = GameObject.Find("Graph").GetComponent<WaveGraph>();
-        graphBufferSize = SAMPLE_RATE / 8;
+        graphBufferSize = SAMPLE_RATE / (int)FREQUENCY_MIN;
         float bufferRatio = (float)graphBufferSize / (float)SAMPLE_RATE;
         audioBufferSize = Mathf.RoundToInt(
             Mathf.Floor(frequency * bufferRatio) * ((float)SAMPLE_RATE / frequency));
@@ -70,7 +77,7 @@ public class AudioGeneration : MonoBehaviour
         currPhase = 0;
         frequency = 200;
         prevFrequency = frequency;
-        amplitude = prevAmplitude = 10;
+        amplitude = prevAmplitude = AMPLITUDE_MAX;
         playing = false;
         redrawn = false;
         clipping = false;
@@ -143,6 +150,10 @@ public class AudioGeneration : MonoBehaviour
             {
                 harmonics[1] = (harmonics[1].amplitude, 0.5f);
             }
+            else if (harmKey == 2)
+            {
+                harmonics[1] = (harmonics[1].amplitude, 0f);
+            }
             HandlePreset(harmKey);
         }
 
@@ -196,6 +207,9 @@ public class AudioGeneration : MonoBehaviour
                 float oldAmp = prevHarmonics[harm].amplitude;
                 float newAmp = harmonics[harm].amplitude;
 
+                float oldPhase = (currPhase + prevHarmonics[harm].phase) % (1f / harm);
+                float newPhase = (currPhase + harmonics[harm].phase) % (1f / harm);
+
                 if (oldAmp != newAmp)
                 {
                     harmed = true;
@@ -204,17 +218,11 @@ public class AudioGeneration : MonoBehaviour
                     currWave = 
                     WaveOperations.reAmpHarm(frequency, amplitude, harm, valChange, harmPhase, currWave);
                 }
-                else
+                if (oldPhase != newPhase)
                 {
-                    float oldPhase = (currPhase + prevHarmonics[harm].phase) % 1f;
-                    float newPhase = (currPhase + harmonics[harm].phase) % 1f;
-
-                    if (oldPhase != newPhase)
-                    {
-                        harmed = true;
-                        currWave = 
-                        WaveOperations.rePhaseHarm(frequency, amplitude, harm, newAmp, oldPhase, newPhase, currWave);
-                    }
+                    harmed = true;
+                    currWave = 
+                    WaveOperations.rePhaseHarm(frequency, amplitude, harm, newAmp, oldPhase, newPhase, currWave);
                 }
             }
         }
@@ -231,9 +239,14 @@ public class AudioGeneration : MonoBehaviour
         // Safety net that ensures no artifacts remain present in the wave due to inaccuracies
         if (!redrawn && reCalculationCounter > reCalcMax && playing)
         {
+            List<float> tempWave = new List<float>(currWave);
             currWave = WaveOperations.CreateSine(frequency, amplitude, harmonics, currPhase, currWave);
+
+            if (!WavesEqual(currWave, tempWave))
+            {
+                graph.draw(currWave);
+            }
             reCalculationCounter = 0;
-            print("Recalc");
         }
         else
         {
@@ -249,7 +262,7 @@ public class AudioGeneration : MonoBehaviour
         for (int i = 0; i < data.Length; i+= channels)
         {  
             // feed data to both audio channels (L and R)
-            data[i+1] = data[i] = currWave[timeIndex] / 2;
+            data[i+1] = data[i] = currWave[timeIndex] / 2; // divided by 2 to control volume
             timeIndex++;
         
             // reset index once it reaches audio buffer size
@@ -345,11 +358,21 @@ public class AudioGeneration : MonoBehaviour
                 break;
         }
         harmonics[harmKey] = (tempAmplitude, tempPhase);
-        harmed = true;
     }
 
     public void ChangePreset(WavePreset new_preset)
     {
         currPreset = new_preset;
+    }
+
+    bool WavesEqual(List<float> wave1, List<float> wave2)
+    {
+        if (wave1.Count != wave2.Count) { return false; }
+
+        for (int i = 0; i < wave1.Count; i++)
+        {
+            if (wave2[i] != wave1[i]) { return false; }
+        }
+        return true;
     }
 }
