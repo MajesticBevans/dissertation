@@ -14,6 +14,7 @@ public class UI : MonoBehaviour
     // GameObjects
     private Button addHarmButton;
     private Button removeHarmButton;
+    private Text harmCount;
 
     // Position offsets and constants
     private float last_xVal;
@@ -43,9 +44,10 @@ public class UI : MonoBehaviour
         audioGen = GameObject.Find("Audio").GetComponent<AudioGeneration>();
         waveGraph = GameObject.Find("Graph").GetComponent<WaveGraph>();
 
-        // Setup harm buttons
+        // Get Buttons and Text
         addHarmButton = GameObject.Find("AddHarm").GetComponent<Button>();
         removeHarmButton = GameObject.Find("RemoveHarm").GetComponent<Button>();
+        harmCount = GameObject.Find("HarmonicsCount").GetComponent<Text>();
         addHarmButton.onClick.AddListener (delegate {audioGen.addHarm();});
         removeHarmButton.onClick.AddListener (delegate {audioGen.removeHarm();});
     }
@@ -108,7 +110,7 @@ public class UI : MonoBehaviour
 
                 phase_spinners.Add(newHarm, phase_spinner_object);
                 phase_spinners[newHarm].GetComponent<Spinner>().setValue(harms[newHarm].phase);
-                
+
                 reset_buttons.Add(newHarm, reset_button);
 
                 last_xVal += NEW_HARM_OFFSET;
@@ -146,6 +148,7 @@ public class UI : MonoBehaviour
                 }
             }
         }
+        harmCount.text = "(" + harms.Keys.Count.ToString() + ")";
     }
 
     public void ChangeAmpSliderValue(int harm)
