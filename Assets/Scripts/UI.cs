@@ -82,6 +82,7 @@ public class UI : MonoBehaviour
                 amp_slider_object.name = "Amp" + newHarm.ToString();
                 phase_spinner_object.name = "Spinner" + newHarm.ToString();
                 reset_object.name = "Reset" + newHarm.ToString();
+
                 text_object.transform.SetParent(transform, false);
                 amp_slider_object.transform.SetParent(transform, false);
                 phase_spinner_object.transform.SetParent(transform, false);
@@ -90,16 +91,24 @@ public class UI : MonoBehaviour
                 Text text = text_object.GetComponent<Text>();
                 text.text = newHarm.ToString();
                 text.alignment = TextAnchor.MiddleCenter;
+
                 Slider amp_slider = amp_slider_object.GetComponent<Slider>();
                 amp_slider.onValueChanged.AddListener (delegate {ChangeAmpSliderValue(newHarm);});
+
                 Button reset_button = reset_object.GetComponent<Button>();
                 reset_button.onClick.AddListener (delegate {ResetValues(newHarm);});
+                Navigation nav = new Navigation();
+                nav.mode = Navigation.Mode.None;
+                reset_button.navigation = nav;
 
                 harm_labels.Add(newHarm, text);
+
                 amp_sliders.Add(newHarm, amp_slider);
                 amp_sliders[newHarm].value = harms[newHarm].amplitude;
+
                 phase_spinners.Add(newHarm, phase_spinner_object);
                 phase_spinners[newHarm].GetComponent<Spinner>().setValue(harms[newHarm].phase);
+                
                 reset_buttons.Add(newHarm, reset_button);
 
                 last_xVal += NEW_HARM_OFFSET;
