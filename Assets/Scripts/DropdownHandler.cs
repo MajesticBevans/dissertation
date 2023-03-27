@@ -24,7 +24,6 @@ public class DropdownHandler : MonoBehaviour
         preset_translation.Add("Reverse Saw Wave", AudioGeneration.WavePreset.REVERSE_SAW_WAVE);
         preset_translation.Add("Triangle Wave", AudioGeneration.WavePreset.TRIANGLE_WAVE);
         preset_translation.Add("Square Wave", AudioGeneration.WavePreset.SQUARE_WAVE);
-
     }
 
     void DropdownSelect(Dropdown dropdown)

@@ -18,7 +18,7 @@ public class AudioGeneration : MonoBehaviour
 
     // CONSTS
     public const int SAMPLE_RATE = 44100;
-    private const int reCalcMax = 120;
+    private const int reCalcMax = 60;
     private const float AMPLITUDE_MAX = 10f;
     private const float FREQUENCY_MAX = 500f;
     private const float FREQUENCY_MIN = 8f;
@@ -140,27 +140,22 @@ public class AudioGeneration : MonoBehaviour
             }
         }
 
+        // Quit key
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
+
         // Add harmonic on up press
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            int harmKey;
-            if (harmonics.Count < 1) { harmKey = 1; }
-            else { harmKey = harmonics.Keys.Max() + 1; }
-            if (harmKey == 2 && currPreset == WavePreset.REVERSE_SAW_WAVE)
-            {
-                harmonics[1] = (harmonics[1].amplitude, 0.5f);
-            }
-            else if (harmKey == 2)
-            {
-                harmonics[1] = (harmonics[1].amplitude, 0f);
-            }
-            HandlePreset(harmKey);
+            addHarm();
         }
 
         // Remove harmonic on down press
         if (Input.GetKeyDown(KeyCode.DownArrow))
         {
-            if (harmonics.Count > 1) {harmonics.Remove(harmonics.Keys.Max());}
+            removeHarm();
         }
 
         // If user changes amplitude, execute reAmpSine
@@ -171,8 +166,24 @@ public class AudioGeneration : MonoBehaviour
             amped = true;
         }
 
+        // If preset has changed, recalculate entire wave
+        if (preset_changed)
+        {
+            prevHarmonics = new Dictionary<int, (float amplitude, float phase)>();
+
+            foreach (int harm in harmonics.Keys)
+            {
+                prevHarmonics[harm] = HandlePreset(harm);
+            }
+
+            WaveOperations.CreateSine(frequency, amplitude, prevHarmonics, currPhase, currWave);
+            harmonics = new Dictionary<int, (float amplitude, float phase)>(prevHarmonics);
+            harmed = true;
+            preset_changed = false;
+        }
+
         // if harmonic added, execute addHarm for each new harmonic
-        if (harmonics.Keys.Count > prevHarmonics.Keys.Count)
+        else if (harmonics.Keys.Count > prevHarmonics.Keys.Count)
         {
             harmed = true;
             var newHarms = harmonics.Keys.Except(prevHarmonics.Keys);
@@ -210,13 +221,14 @@ public class AudioGeneration : MonoBehaviour
                 float oldPhase = (currPhase + prevHarmonics[harm].phase) % (1f / harm);
                 float newPhase = (currPhase + harmonics[harm].phase) % (1f / harm);
 
+                if (oldAmp != newAmp && oldPhase != newPhase) print("detected");
+
                 if (oldAmp != newAmp)
                 {
                     harmed = true;
                     float valChange = newAmp - oldAmp;
-                    float harmPhase = (currPhase + harmonics[harm].phase) % 1f;
                     currWave = 
-                    WaveOperations.reAmpHarm(frequency, amplitude, harm, valChange, harmPhase, currWave);
+                    WaveOperations.reAmpHarm(frequency, amplitude, harm, valChange, oldPhase, currWave);
                 }
                 if (oldPhase != newPhase)
                 {
@@ -236,6 +248,7 @@ public class AudioGeneration : MonoBehaviour
             ui.RedrawSliders(harmonics);
             harmed = amped = false;
         }
+        
         // Safety net that ensures no artifacts remain present in the wave due to inaccuracies
         if (!redrawn && reCalculationCounter > reCalcMax && playing)
         {
@@ -258,6 +271,7 @@ public class AudioGeneration : MonoBehaviour
     void OnAudioFilterRead(float[] data, int channels)
     {
         clipping = false;
+
         // WRITE NEXT CHUNK TO AUDIO BUFFER (512 samples)
         for (int i = 0; i < data.Length; i+= channels)
         {  
@@ -271,11 +285,13 @@ public class AudioGeneration : MonoBehaviour
                 timeIndex = 0;
             }
             
+            // if any values are over 1, then clipping will occur
             if (data[i] > 1)
             {
                 clipping = true;
             }
         }
+
         // If user changes frequency, execute BlendSine
         if (frequency != prevFrequency)
         {
@@ -295,7 +311,19 @@ public class AudioGeneration : MonoBehaviour
         }
     }
 
-    public void HandlePreset(int harmKey)
+    public void addHarm()
+    {
+        int harmKey = harmonics.Count < 1 ? 1 : harmonics.Keys.Max() + 1;
+
+        if (harmKey == 2 && currPreset == WavePreset.REVERSE_SAW_WAVE) harmonics[1] = (harmonics[1].amplitude, 0.5f);
+        else if (harmKey == 2) harmonics[1] = (harmonics[1].amplitude, 0f);
+
+        harmonics[harmKey] = HandlePreset(harmKey);
+    }
+
+    public void removeHarm() { if (harmonics.Count > 1) harmonics.Remove(harmonics.Keys.Max()); }
+
+    public (float, float) HandlePreset(int harmKey)
     {
         float tempAmplitude;
         float tempPhase;
@@ -357,12 +385,17 @@ public class AudioGeneration : MonoBehaviour
                 tempPhase = 0f;
                 break;
         }
-        harmonics[harmKey] = (tempAmplitude, tempPhase);
+        return (tempAmplitude, tempPhase);
     }
 
     public void ChangePreset(WavePreset new_preset)
     {
-        currPreset = new_preset;
+        if (currPreset != new_preset)
+        {
+            currPreset = new_preset;
+            preset_changed = true;
+        }
+        prevHarmonics = new Dictionary<int, (float amplitude, float phase)>(harmonics);
     }
 
     bool WavesEqual(List<float> wave1, List<float> wave2)

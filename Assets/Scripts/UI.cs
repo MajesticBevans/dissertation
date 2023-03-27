@@ -11,6 +11,10 @@ public class UI : MonoBehaviour
     public GameObject text_prefab;
     public GameObject reset_button_prefab;
 
+    // GameObjects
+    private Button addHarmButton;
+    private Button removeHarmButton;
+
     // Position offsets and constants
     private float last_xVal;
     private const float AMP_YVAL = -350f;
@@ -38,6 +42,12 @@ public class UI : MonoBehaviour
         // Import scripts
         audioGen = GameObject.Find("Audio").GetComponent<AudioGeneration>();
         waveGraph = GameObject.Find("Graph").GetComponent<WaveGraph>();
+
+        // Setup harm buttons
+        addHarmButton = GameObject.Find("AddHarm").GetComponent<Button>();
+        removeHarmButton = GameObject.Find("RemoveHarm").GetComponent<Button>();
+        addHarmButton.onClick.AddListener (delegate {audioGen.addHarm();});
+        removeHarmButton.onClick.AddListener (delegate {audioGen.removeHarm();});
     }
 
     public void RedrawSliders(Dictionary<int, (float amplitude, float phase)> harms)
@@ -81,9 +91,9 @@ public class UI : MonoBehaviour
                 text.text = newHarm.ToString();
                 text.alignment = TextAnchor.MiddleCenter;
                 Slider amp_slider = amp_slider_object.GetComponent<Slider>();
-                amp_slider.onValueChanged.AddListener (delegate {ChangeAmpSliderValue (newHarm);});
+                amp_slider.onValueChanged.AddListener (delegate {ChangeAmpSliderValue(newHarm);});
                 Button reset_button = reset_object.GetComponent<Button>();
-                reset_button.onClick.AddListener (delegate {audioGen.HandlePreset (newHarm);});
+                reset_button.onClick.AddListener (delegate {ResetValues(newHarm);});
 
                 harm_labels.Add(newHarm, text);
                 amp_sliders.Add(newHarm, amp_slider);
@@ -132,5 +142,10 @@ public class UI : MonoBehaviour
     public void ChangeAmpSliderValue(int harm)
     {
         audioGen.harmonics[harm] = (amp_sliders[harm].value, audioGen.harmonics[harm].phase);
+    }
+
+    private void ResetValues(int harm)
+    {
+        audioGen.harmonics[harm] = audioGen.HandlePreset(harm);
     }
 }
