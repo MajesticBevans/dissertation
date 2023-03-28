@@ -268,7 +268,7 @@ public class AudioGeneration : MonoBehaviour
             }
             reCalculationCounter = 0;
         }
-        else
+        else if (!redrawn)
         {
             reCalculationCounter++;
         }
