@@ -39,6 +39,7 @@ public class AudioGeneration : MonoBehaviour
     private float prevAmplitude;
     private int audioBufferSize;
     private int graphBufferSize;
+    private float bufferRatio;
     public Dictionary<int, (float amplitude, float phase)> harmonics = new Dictionary<int, (float, float)>();
     public Dictionary<int, (float amplitude, float phase)> prevHarmonics = new Dictionary<int, (float, float)>();
     private List<float> currWave;
@@ -67,7 +68,7 @@ public class AudioGeneration : MonoBehaviour
         //setup graph
         graph = GameObject.Find("Graph").GetComponent<WaveGraph>();
         graphBufferSize = SAMPLE_RATE / (int)FREQUENCY_MIN;
-        float bufferRatio = (float)graphBufferSize / (float)SAMPLE_RATE;
+        bufferRatio = (float)graphBufferSize / (float)SAMPLE_RATE;
         audioBufferSize = Mathf.RoundToInt(
             Mathf.Floor(frequency * bufferRatio) * ((float)SAMPLE_RATE / frequency));
         graph.setup(graphBufferSize);
@@ -84,6 +85,7 @@ public class AudioGeneration : MonoBehaviour
         reCalculationCounter = 0;
         harmonics.Add(1, (1, 0)); // add fundamental harmonic, with amplitude 1 and phase 0
         prevHarmonics = new Dictionary<int, (float, float)>(harmonics);
+        WaveOperations.setSampleRate(SAMPLE_RATE);
         currWave = WaveOperations.CreateSine(frequency, amplitude, currWave); // create initial wave
         currPreset = WavePreset.N_FALLOFF;
 
@@ -103,10 +105,10 @@ public class AudioGeneration : MonoBehaviour
             blended = false;
             graph.draw(currWave);
             redrawn = true;
+
             // PRESENT
-            float bufferRatio = (float)graphBufferSize / (float)SAMPLE_RATE;
-            audioBufferSize = Mathf.RoundToInt(
-                Mathf.Floor(frequency * bufferRatio) * ((float)SAMPLE_RATE / frequency));
+            bufferRatio = (float)graphBufferSize / (float)SAMPLE_RATE;
+            audioBufferSize = Mathf.RoundToInt(Mathf.Floor(frequency * bufferRatio) * ((float)SAMPLE_RATE / frequency));
         }
         
         if (clipping && !clippingErrorText.activeSelf)
@@ -180,6 +182,8 @@ public class AudioGeneration : MonoBehaviour
             harmonics = new Dictionary<int, (float amplitude, float phase)>(prevHarmonics);
             harmed = true;
             preset_changed = false;
+            // ensure prevHarmonics is updated to detect future changes and UI and graph are redrawn
+            prevHarmonics = new Dictionary<int, (float amplitude, float phase)>(harmonics);
         }
 
         // if harmonic added, execute addHarm for each new harmonic
@@ -194,6 +198,8 @@ public class AudioGeneration : MonoBehaviour
                 currWave = 
                 WaveOperations.addHarm(frequency, amplitude, newHarm, harmonics[newHarm].amplitude, harmPhase, currWave);
             }
+            // ensure prevHarmonics is updated to detect future changes and UI and graph are redrawn
+            prevHarmonics = new Dictionary<int, (float amplitude, float phase)>(harmonics);
         }
 
         // if harmonic removed, execute removeHarm for each removed harmonic
@@ -208,6 +214,8 @@ public class AudioGeneration : MonoBehaviour
                 currWave = 
                 WaveOperations.removeHarm(frequency, amplitude, oldHarm, prevHarmonics[oldHarm].amplitude, harmPhase, currWave);
             }
+            // ensure prevHarmonics is updated to detect future changes and UI and graph are redrawn
+            prevHarmonics = new Dictionary<int, (float amplitude, float phase)>(harmonics);
         }
 
         // detect amplitude/phase changes per harmonic
@@ -237,10 +245,9 @@ public class AudioGeneration : MonoBehaviour
                     WaveOperations.rePhaseHarm(frequency, amplitude, harm, newAmp, oldPhase, newPhase, currWave);
                 }
             }
+            // ensure prevHarmonics is updated to detect future changes and UI and graph are redrawn
+            prevHarmonics = new Dictionary<int, (float amplitude, float phase)>(harmonics);
         }
-        
-        // ensure prevHarmonics is updated to detect future changes and UI and graph are redrawn
-        prevHarmonics = new Dictionary<int, (float amplitude, float phase)>(harmonics);
 
         if (harmed || amped)
         {

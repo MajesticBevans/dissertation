@@ -4,8 +4,9 @@ using UnityEngine;
 
 public static class WaveOperations
 {
-    private static int SAMPLE_RATE = 44100;
+    private static int SAMPLE_RATE;
     private const float AMPLITUDE_SCALE_FACTOR = 0.01f;
+    private const float twoPi = 2f * Mathf.PI;
     public static void setSampleRate(int rate)
     {
         SAMPLE_RATE = rate;
@@ -14,9 +15,11 @@ public static class WaveOperations
     // Creates a sinewave with phase=0
     public static List<float> CreateSine(float frequency, float amplitude, List<float> wave)
     {
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
+
         for (int i = 0; i < wave.Count; i++)
         {
-            wave[i] = AMPLITUDE_SCALE_FACTOR * amplitude * Mathf.Sin(2 * Mathf.PI * i * frequency / SAMPLE_RATE);
+            wave[i] = amplitude * Mathf.Sin(twoPi * i * frequency / SAMPLE_RATE);
         }
         return wave;
     }
@@ -24,13 +27,15 @@ public static class WaveOperations
     // Creates a sinewave with phase=0, but allowing harmonics with phase=0
     public static List<float> CreateSine(float frequency, float amplitude, Dictionary<int, (float amplitude, float phase)> harms, List<float> wave)
     {
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
+
         for (int i = 0; i < wave.Count; i++)
         {
             float value = 0;
 
             foreach (int key in harms.Keys)
             {
-                value += AMPLITUDE_SCALE_FACTOR * amplitude * harms[key].amplitude * Mathf.Sin(2 * Mathf.PI * i * key * frequency / SAMPLE_RATE);
+                value += amplitude * harms[key].amplitude * Mathf.Sin(twoPi * i * key * frequency / SAMPLE_RATE);
             }
             wave[i] = value;
         }
@@ -40,18 +45,20 @@ public static class WaveOperations
     // Creates a sinewave as above, but allowing harmonics w/ phase and accounting for current fundamental phase
     public static List<float> CreateSine(float frequency, float amplitude, Dictionary<int, (float amplitude, float phase)> harms, float phase, List<float> wave)
     {
-            for (int i = 0; i < wave.Count; i++)
-            {
-                float value = 0;
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
 
-                foreach (int key in harms.Keys)
-                {
-                    float harmPhase = (phase + harms[key].phase) % 1f;
-                    value += AMPLITUDE_SCALE_FACTOR * amplitude * harms[key].amplitude * Mathf.Sin(2 * Mathf.PI * key * ((i * frequency / SAMPLE_RATE) - harmPhase));
-                }
-                wave[i] = value;
+        for (int i = 0; i < wave.Count; i++)
+        {
+            float value = 0;
+
+            foreach (int key in harms.Keys)
+            {
+                float harmPhase = (phase + harms[key].phase) % 1f;
+                value += amplitude * harms[key].amplitude * Mathf.Sin(twoPi * key * ((i * frequency / SAMPLE_RATE) - harmPhase));
             }
-            return wave;
+            wave[i] = value;
+        }
+        return wave;
     }
 
     // Calculate the phase of the wave beginning at the y position at the end of the current
@@ -61,8 +68,9 @@ public static class WaveOperations
     public static float BlendSine(float frequency, float prevFrequency, float amplitude, Dictionary<int,(float amplitude, float phase)> harms, float wavePhase, int index, List<float> wave)
     {
         float waveProgress = index * prevFrequency / SAMPLE_RATE;
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
 
-        wavePhase -= waveProgress % 1f;
+        wavePhase -= waveProgress;
 
         for (int i = 0; i < wave.Count; i++)
         {
@@ -70,8 +78,8 @@ public static class WaveOperations
 
             foreach (int key in harms.Keys)
             {
-                float harmPhase = (wavePhase + harms[key].phase) % 1f;
-                value += AMPLITUDE_SCALE_FACTOR * amplitude * harms[key].amplitude * Mathf.Sin(2 * Mathf.PI * key * ((i * frequency / SAMPLE_RATE) - harmPhase));
+                float harmPhase = (wavePhase + harms[key].phase);
+                value += amplitude * harms[key].amplitude * Mathf.Sin(twoPi * key * ((i * frequency / SAMPLE_RATE) - harmPhase));
             }
             wave[i] = value;
         }
@@ -91,9 +99,10 @@ public static class WaveOperations
     // Add the harmonic with frequency harm * fundamental frequency to the wave
     public static List<float> addHarm(float frequency, float amplitude, int harm, float harmAmplitude, float phase, List<float> wave)
     {
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
         for (int i = 0; i < wave.Count; i++)
         {
-            wave[i] += AMPLITUDE_SCALE_FACTOR * amplitude * harmAmplitude * Mathf.Sin(2 * Mathf.PI * harm * ((i  * frequency / SAMPLE_RATE) - phase));
+            wave[i] += amplitude * harmAmplitude * Mathf.Sin(twoPi * harm * ((i  * frequency / SAMPLE_RATE) - phase));
         }
         return wave;
     }
@@ -101,9 +110,10 @@ public static class WaveOperations
     // Remove the harmonic with frequency harm * fundamental frequency from the wave
     public static List<float> removeHarm(float frequency, float amplitude, int harm, float harmAmplitude, float harmPhase, List<float> wave)
     {
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
         for (int i = 0; i < wave.Count; i++)
         {
-            wave[i] -= AMPLITUDE_SCALE_FACTOR * amplitude * harmAmplitude * Mathf.Sin(2 * Mathf.PI * harm * ((i  * frequency / SAMPLE_RATE) - harmPhase));
+            wave[i] -= amplitude * harmAmplitude * Mathf.Sin(twoPi * harm * ((i  * frequency / SAMPLE_RATE) - harmPhase));
         }
         return wave;
     }
@@ -113,19 +123,23 @@ public static class WaveOperations
     // and then adding the harmonic back with the new amplitude
     public static List<float> reAmpHarm(float frequency, float amplitude, int harm, float valChange, float harmPhase, List<float> wave)
     {
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
+        
         for (int i = 0; i < wave.Count; i++)
         {
-            wave[i] += AMPLITUDE_SCALE_FACTOR * amplitude * valChange * Mathf.Sin(2 * Mathf.PI * harm * ((i  * frequency / SAMPLE_RATE) - harmPhase));
+            wave[i] += amplitude * valChange * Mathf.Sin(twoPi * harm * ((i  * frequency / SAMPLE_RATE) - harmPhase));
         }
         return wave;
     }
 
     public static List<float> rePhaseHarm(float frequency, float amplitude, int harm, float ampHarm, float oldPhase, float newPhase, List<float> wave)
     {
+        amplitude *= AMPLITUDE_SCALE_FACTOR;
+
         for (int i = 0; i < wave.Count; i++)
         {
-            wave[i] -= AMPLITUDE_SCALE_FACTOR * amplitude * ampHarm * Mathf.Sin(2 * Mathf.PI * harm * ((i * frequency / SAMPLE_RATE) - oldPhase));
-            wave[i] += AMPLITUDE_SCALE_FACTOR * amplitude * ampHarm * Mathf.Sin(2 * Mathf.PI * harm * ((i * frequency / SAMPLE_RATE) - newPhase));
+            wave[i] -= amplitude * ampHarm * Mathf.Sin(twoPi * harm * ((i * frequency / SAMPLE_RATE) - oldPhase));
+            wave[i] += amplitude * ampHarm * Mathf.Sin(twoPi * harm * ((i * frequency / SAMPLE_RATE) - newPhase));
         }
         return wave;
     }
